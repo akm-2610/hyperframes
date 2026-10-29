@@ -120,13 +120,21 @@ export function registerRenderRoutes(api: Hono, adapter: StudioApiAdapter): void
       gif: ".gif",
     };
     const format = VALID_FORMATS.find((value) => value === body.format) ?? "mp4";
+    const fixedRenderProfile = process.env.VITE_HYPERFRAMES_RENDER_PROFILE === "4k60";
+    if (fixedRenderProfile && format === "gif") {
+      return c.json({ error: "GIF export is disabled by the 4K/60 fps render profile" }, 400);
+    }
 
     // Default to 30 fps when unset or unparseable. The route stays lenient on
     // invalid fps values (matching the lenient handling of `resolution` and
     // `quality` already in this file) — the producer surfaces a clearer error
     // message if the caller really did mean to fail loudly.
     const fpsParse = body.fps === undefined ? null : parseFps(body.fps);
-    const requestedFps = fpsParse && fpsParse.ok ? fpsParse.value : { num: 30, den: 1 };
+    const requestedFps = fixedRenderProfile
+      ? { num: 60, den: 1 }
+      : fpsParse && fpsParse.ok
+        ? fpsParse.value
+        : { num: 30, den: 1 };
     const fps =
       format === "gif" && fpsToNumber(requestedFps) > 30 ? { num: 30, den: 1 } : requestedFps;
     const quality = ["draft", "standard", "high"].includes(body.quality ?? "")
@@ -135,6 +143,12 @@ export function registerRenderRoutes(api: Hono, adapter: StudioApiAdapter): void
     const outputResolution = VALID_RESOLUTIONS.has(body.resolution ?? "")
       ? (body.resolution as CanvasResolution)
       : undefined;
+    if (
+      fixedRenderProfile &&
+      !["landscape-4k", "portrait-4k", "square-4k"].includes(outputResolution ?? "")
+    ) {
+      return c.json({ error: "This host only accepts 4K render resolutions" }, 400);
+    }
     let composition: string | undefined;
     if (typeof body.composition === "string" && body.composition.length > 0) {
       // `body.composition` is attacker-controlled (from c.req.json()).

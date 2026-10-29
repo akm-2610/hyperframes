@@ -1,0 +1,20 @@
+services:
+  hyperframes:
+    build:
+      context: .
+      dockerfile: Dockerfile.studio
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5190:5190"
+    volumes:
+      - .:/workspace
+      - studio_node_modules:/workspace/node_modules
+      - studio_data:/workspace/packages/studio/data
+    environment:
+      VITE_HYPERFRAMES_RENDER_PROFILE: 4k60
+      NODE_ENV: development
+
+volumes:
+  studio_node_modules:
+  studio_data:

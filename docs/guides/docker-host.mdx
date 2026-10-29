@@ -1,0 +1,51 @@
+---
+title: "Host HyperFrames Studio with Docker"
+description: "Run the HyperFrames Studio locally in Docker with persistent projects and a fixed 4K/60 fps render profile."
+---
+
+This repository includes a Docker Compose setup for running the Studio locally.
+The host binds to `127.0.0.1:5190`, and project data is kept in a named Docker
+volume.
+
+## Start the host
+
+From the repository root, with Docker Desktop running:
+
+```bash
+docker compose up --build -d
+```
+
+Open [http://localhost:5190](http://localhost:5190). To inspect startup logs:
+
+```bash
+docker compose logs -f hyperframes
+```
+
+Stop the host with `docker compose down`. This keeps the `studio_data` volume;
+do not add `--volumes` if you want to keep projects created in this Studio.
+
+## Render policy
+
+The Docker-hosted Studio locks video exports to 4K and 60 fps. The render API
+also rejects non-4K resolutions and GIF requests, so changing browser requests
+cannot bypass the profile. GIF is excluded because HyperFrames caps GIF exports
+at 30 fps. A composition must have an aspect ratio and dimensions that can be
+upscaled to its matching 4K preset by an integer factor.
+
+For command-line MP4 renders, use the fixed-profile helper from the repository:
+
+```powershell
+.\scripts\render-4k60.ps1 -ProjectPath "C:\path\to\project"
+```
+
+The helper runs `hyperframes render` with Docker, strict linting, 4K output,
+and 60 fps. It writes `renders/final-4k60.mp4` inside the project by default.
+`OutputPath` may choose a different relative `.mp4` path inside that project;
+the resolution and frame rate are not configurable.
+
+## Keep it local
+
+This setup runs the Studio development server, which does not provide
+authentication. Compose binds it only to localhost. Do not expose port 5190
+directly to the internet; a public deployment needs an authenticated,
+production-ready hosting layer.

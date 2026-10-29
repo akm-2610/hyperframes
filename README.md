@@ -200,6 +200,12 @@ The output is a `DESIGN.md` superset your whole toolchain can read. Atoms stay s
 
 Browse and remix them all at [hyperframes.studio/design](https://hyperframes.studio/design).
 
+## Self-host with Docker
+
+The Studio can run locally in Docker with persistent project storage and a
+fixed 4K/60 fps render profile. See the [Docker hosting guide](docs/guides/docker-host.mdx)
+for setup and render instructions.
+
 ## How It Works
 
 Define a video as HTML. Add data attributes for timing and tracks. Use GSAP, CSS, Lottie, Three.js, Anime.js, WAAPI, or your own frame adapter for seekable animation.

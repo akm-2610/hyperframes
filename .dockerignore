@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/.hyperframes
+**/tests
+**/*.test.*
+**/*.spec.*
+docs
+examples
+skills
+.agents
+.claude
+.codex

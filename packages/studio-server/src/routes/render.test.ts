@@ -177,6 +177,46 @@ describe("POST /projects/:id/render — outputResolution forwarding", () => {
       }
     }
   });
+
+  it("enforces 4K at 60 fps and rejects formats or resolutions outside the hosted profile", async () => {
+    vi.stubEnv("VITE_HYPERFRAMES_RENDER_PROFILE", "4k60");
+    const spy = vi.fn();
+    const { app, cleanup } = buildApp(spy);
+    try {
+      const res = await app.request("http://localhost/projects/demo/render", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          fps: 24,
+          quality: "high",
+          format: "mp4",
+          resolution: "landscape-4k",
+        }),
+      });
+      expect(res.status).toBe(200);
+      expect(spy.mock.calls[0][0]).toMatchObject({
+        fps: { num: 60, den: 1 },
+        outputResolution: "landscape-4k",
+      });
+
+      const non4k = await app.request("http://localhost/projects/demo/render", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ fps: 60, format: "mp4", resolution: "landscape" }),
+      });
+      expect(non4k.status).toBe(400);
+
+      const gif = await app.request("http://localhost/projects/demo/render", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ fps: 60, format: "gif", resolution: "landscape-4k" }),
+      });
+      expect(gif.status).toBe(400);
+    } finally {
+      cleanup();
+      vi.unstubAllEnvs();
+    }
+  });
 });
 
 describe("POST /projects/:id/render — composition forwarding", () => {

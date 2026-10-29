@@ -291,22 +291,31 @@ function FormatExportButton({
   onRecheckFfmpeg: () => void;
 }) {
   const persisted = getPersistedRenderSettings();
-  const [format, setFormat] = useState<"mp4" | "webm" | "mov" | "gif">(persisted.format);
+  const fixedRenderProfile = import.meta.env.VITE_HYPERFRAMES_RENDER_PROFILE === "4k60";
+  const [format, setFormat] = useState<"mp4" | "webm" | "mov" | "gif">(
+    fixedRenderProfile && persisted.format === "gif" ? "mp4" : persisted.format,
+  );
   const [quality, setQuality] = useState<"draft" | "standard" | "high">(persisted.quality);
-  const [resolution, setResolution] = useState<RenderScale>("auto");
-  const [requestedFps, setFps] = useState<24 | 30 | 60>(persisted.fps);
+  const [resolution, setResolution] = useState<RenderScale>(fixedRenderProfile ? "4k" : "auto");
+  const [requestedFps, setFps] = useState<24 | 30 | 60>(
+    fixedRenderProfile ? 60 : persisted.fps,
+  );
   const fps = resolveRenderFps(format, requestedFps);
   const [gpu, setGpu] = useState(persisted.gpu);
   const [gifLoop, setGifLoop] = useState("0");
   const loopCount = Number(gifLoop);
   const invalidGifLoop = isInvalidGifLoop(format, gifLoop);
+  const fixedResolutionInvalid =
+    fixedRenderProfile && !scaleApplies("4k", compositionDimensions);
 
   // Only a definite "not installed" blocks Export. A null status means the
   // probe gave no answer, and refusing to export on no answer would break
   // setups that are perfectly fine. Holding the narrowed value rather than a
   // boolean keeps the notice from re-testing what this line already decided.
   const missingFfmpeg = ffmpeg && !ffmpeg.ok ? ffmpeg : null;
-  const exportBlocked = isRenderExportBlocked(isRendering, missingFfmpeg !== null, invalidGifLoop);
+  const exportBlocked =
+    isRenderExportBlocked(isRendering, missingFfmpeg !== null, invalidGifLoop) ||
+    fixedResolutionInvalid;
 
   // MOV (ProRes) is a fixed-quality codec — quality selector has no effect.
   const showQuality = format !== "mov";
@@ -329,8 +338,8 @@ function FormatExportButton({
           <Select
             label="Format"
             value={format}
-            options={FORMAT_OPTIONS}
-            disabled={isRendering}
+            options={FORMAT_OPTIONS.filter((option) => !fixedRenderProfile || option.value !== "gif")}
+            disabled={isRendering || fixedRenderProfile}
             onCommit={(next) => {
               const v = resolveRenderFormat(next);
               setFormat(v);
@@ -348,7 +357,7 @@ function FormatExportButton({
               label: scaleOptionLabel(value, compositionDimensions),
               disabled: !scaleApplies(value, compositionDimensions),
             }))}
-            disabled={isRendering}
+            disabled={isRendering || fixedRenderProfile}
             onCommit={(next) => setResolution(next as RenderScale)}
           />
         </div>
@@ -358,7 +367,7 @@ function FormatExportButton({
             label="Frame rate"
             value={String(fps)}
             options={getRenderFpsOptions(format)}
-            disabled={isRendering}
+            disabled={isRendering || fixedRenderProfile}
             onCommit={(next) => {
               const v = Number(next) as 24 | 30 | 60;
               setFps(v);
@@ -383,6 +392,12 @@ function FormatExportButton({
           </div>
         )}
       </div>
+      {fixedResolutionInvalid && (
+        <p role="alert" className="text-step-10 text-danger-ink">
+          This composition cannot be upscaled to 4K by an integer factor. Adjust its dimensions
+          before exporting.
+        </p>
+      )}
       <GifLoopInput
         format={format}
         value={gifLoop}
