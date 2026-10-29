@@ -143,31 +143,25 @@ describe("RenderQueue controls", () => {
       exportButtonIn(host).dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
-    it("locks hosted render exports to 4K at 60 fps", () => {
-      vi.stubEnv("VITE_HYPERFRAMES_RENDER_PROFILE", "4k60");
-      const onStartRender: Mock<StartRenderHandler> = vi.fn();
-      const host = mountRenderQueue(onStartRender);
-
-      expect(triggerFor(host, "Format").getAttribute("aria-disabled")).toBe("true");
-      expect(triggerFor(host, "Resolution").textContent).toContain("4K");
-      expect(triggerFor(host, "Resolution").getAttribute("aria-disabled")).toBe("true");
-      expect(triggerFor(host, "Frame rate").textContent).toContain("60 fps");
-      expect(triggerFor(host, "Frame rate").getAttribute("aria-disabled")).toBe("true");
-      expect(document.body.textContent).not.toContain("GIF");
-
-      act(() => {
-        exportButtonIn(host).dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      });
-      expect(onStartRender).toHaveBeenCalledWith(
-        "mp4",
-        "standard",
-        "landscape-4k",
-        60,
-        false,
-      );
-    });
-
     expect(onStartRender).toHaveBeenCalledWith("mp4", "standard", "landscape-4k", 30, false);
+  });
+
+  it("locks hosted render exports to 4K at 60 fps", () => {
+    vi.stubEnv("VITE_HYPERFRAMES_RENDER_PROFILE", "4k60");
+    const onStartRender: Mock<StartRenderHandler> = vi.fn();
+    const host = mountRenderQueue(onStartRender);
+
+    expect((triggerFor(host, "Format") as HTMLButtonElement).disabled).toBe(true);
+    expect(triggerFor(host, "Resolution").textContent).toContain("4K");
+    expect((triggerFor(host, "Resolution") as HTMLButtonElement).disabled).toBe(true);
+    expect(triggerFor(host, "Frame rate").textContent).toContain("60 fps");
+    expect((triggerFor(host, "Frame rate") as HTMLButtonElement).disabled).toBe(true);
+    expect(document.body.textContent).not.toContain("GIF");
+
+    act(() => {
+      exportButtonIn(host).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onStartRender).toHaveBeenCalledWith("mp4", "standard", "landscape-4k", 60, false);
   });
 
   it("refuses a resolution the composition cannot reach, and says why", async () => {

@@ -53,9 +53,11 @@ ENV NODE_ENV=development
 
 WORKDIR /workspace
 COPY . .
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile || bun install --frozen-lockfile
+RUN bun run --filter '@hyperframes/{parsers,lint,studio-server}' build \
+    && bun run --filter @hyperframes/core build
 
 WORKDIR /workspace/packages/studio
 EXPOSE 5190
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["bun", "--bun", "/workspace/node_modules/.bin/vite", "--host", "0.0.0.0", "--port", "5190", "--strictPort"]
+CMD ["bun", "--bun", "./node_modules/.bin/vite", "--host", "0.0.0.0", "--port", "5190", "--strictPort"]
